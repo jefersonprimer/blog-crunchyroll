@@ -1,205 +1,181 @@
 <template>
   <div class="post-editor">
     <div class="editor-header">
-      <input
-        v-model="post.title"
-        type="text"
-        placeholder="Post Title"
-        class="title-input"
-      />
-      <input
-        v-model="post.summary"
-        type="text"
-        placeholder="Post Summary"
-        class="summary-input"
-      />
-      <div class="cover-image">
-        <div class="cover-image-preview" v-if="post.cover_image">
-          <img :src="post.cover_image" alt="Cover" />
-          <button @click="post.cover_image = ''" class="remove-image">×</button>
+      <h1>{{ isEditing ? 'Edit Post' : 'New Post' }}</h1>
+      <div class="actions">
+        <button class="btn btn-secondary" @click="router.push('/admin/posts')">Cancel</button>
+        <button v-if="isEditing" class="btn btn-danger" @click="deletePost">Delete</button>
+        <button class="btn btn-primary" @click="savePost">Save Post</button>
+      </div>
+    </div>
+
+    <div class="editor-form">
+      <div class="form-group">
+        <label>Cover Image</label>
+        <input type="text" v-model="post.cover_image" placeholder="Enter cover image URL" />
+        <div v-if="post.cover_image" class="image-preview">
+          <img :src="post.cover_image" alt="Cover preview" />
         </div>
-        <div class="cover-image-input">
+      </div>
+
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" v-model="post.title" placeholder="Enter post title" />
+      </div>
+
+      <div class="form-group">
+        <label>Summary</label>
+        <textarea v-model="post.summary" placeholder="Enter post summary"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Content</label>
+        <RichTextEditor v-model="post.content" />
+      </div>
+
+      <div class="form-group">
+        <label>Tags</label>
+        <div class="tags-input">
           <input
             type="text"
-            v-model="post.cover_image"
-            placeholder="Cover Image URL"
+            v-model="newTag"
+            @keyup.enter="addTag"
+            placeholder="Add a tag and press Enter"
           />
-          <button @click="insertUnsplashImage" class="unsplash-button">
-            Add Unsplash Image
-          </button>
+          <button @click="addTag" class="btn-tag">Add Tag</button>
+        </div>
+        <div class="tags-list">
+          <span v-for="tag in post.tags" :key="tag" class="tag">
+            {{ tag }}
+            <button @click="removeTag(tag)">&times;</button>
+          </span>
         </div>
       </div>
-    </div>
 
-    <div class="editor-toolbar">
-      <button @click="insertImage">Image</button>
-      <button @click="insertUnsplashImage">Unsplash Image</button>
-      <button @click="insertVideo">Video</button>
-      <button @click="insertEmbed">Embed</button>
-      <button @click="insertCodeBlock">Code Block</button>
-      <button @click="insertNewPart">New Part</button>
-    </div>
-
-    <div class="editor-content">
-      <textarea
-        v-model="post.content"
-        placeholder="Write your post content here..."
-        @keyup="handleContentChange"
-      ></textarea>
-    </div>
-
-    <div class="tags-section">
-      <input
-        v-model="newTag"
-        @keyup.enter="addTag"
-        placeholder="Add tags (press Enter)"
-      />
-      <div class="tags-list">
-        <span v-for="(tag, index) in post.tags" :key="index" class="tag">
-          {{ tag }}
-          <button @click="removeTag(index)">×</button>
-        </span>
+      <div class="form-group">
+        <label>Author Name</label>
+        <input type="text" v-model="post.author.name" placeholder="Enter author name" />
       </div>
-    </div>
 
-    <div class="editor-footer">
-      <button @click="savePost" class="save-button">Save Post</button>
+      <div class="form-group">
+        <label>Author Image</label>
+        <input type="text" v-model="post.author.image" placeholder="Enter author image URL" />
+        <div v-if="post.author.image" class="image-preview">
+          <img :src="post.author.image" alt="Author preview" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import axios from 'axios'
+import { useRoute, useRouter } from 'vue-router'
+import RichTextEditor from '../Editor/RichTextEditor.vue'
+import { postService, type Post } from '../../services/postService'
 
 const route = useRoute()
-const API_URL = 'http://localhost:8080/api'
+const router = useRouter()
+const isEditing = ref(false)
 
-const post = ref({
+const post = ref<Partial<Post>>({
   title: '',
   summary: '',
   content: '',
   cover_image: '',
   tags: [],
   author: {
-    name: 'Admin',
-    image: '',
-    role: 'Author'
-  }
+    name: '',
+    image: ''
+  },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  read_time: 0
 })
 
 const newTag = ref('')
 
 onMounted(async () => {
   if (route.params.id) {
+    isEditing.value = true
     try {
-      const response = await axios.get(`${API_URL}/posts/${route.params.id}`)
-      post.value = response.data
+      const fetchedPost = await postService.getPost(route.params.id as string)
+      console.log('Fetched post:', fetchedPost)
+      post.value = {
+        ...fetchedPost,
+        content: fetchedPost.content || '',
+        tags: fetchedPost.tags || [],
+        author: {
+          name: fetchedPost.author?.name || '',
+          image: fetchedPost.author?.image || ''
+        }
+      }
     } catch (error) {
       console.error('Error fetching post:', error)
+      alert('Error loading post. Please try again.')
     }
   }
 })
 
 const addTag = () => {
-  if (newTag.value.trim()) {
-    post.value.tags.push(newTag.value.trim())
+  if (newTag.value && !post.value.tags?.includes(newTag.value)) {
+    post.value.tags?.push(newTag.value)
     newTag.value = ''
   }
 }
 
-const removeTag = (index) => {
-  post.value.tags.splice(index, 1)
-}
-
-const insertImage = () => {
-  const url = prompt('Enter image URL:')
-  if (url) {
-    insertAtCursor(`<img src="${url}" alt="Image" />`)
-  }
-}
-
-const insertUnsplashImage = () => {
-  const query = prompt('Enter search query for Unsplash:')
-  if (query) {
-    const url = `https://source.unsplash.com/random/800x600/?${query}`
-    post.value.cover_image = url
-  }
-}
-
-const insertVideo = () => {
-  const url = prompt('Enter video URL:')
-  if (url) {
-    insertAtCursor(`<video src="${url}" controls></video>`)
-  }
-}
-
-const insertEmbed = () => {
-  const url = prompt('Enter embed URL:')
-  if (url) {
-    insertAtCursor(`<iframe src="${url}" frameborder="0" allowfullscreen></iframe>`)
-  }
-}
-
-const insertCodeBlock = () => {
-  const code = prompt('Enter code:')
-  if (code) {
-    insertAtCursor(`<pre><code>${code}</code></pre>`)
-  }
-}
-
-const insertNewPart = () => {
-  insertAtCursor('\n\n---\n\n')
-}
-
-const insertAtCursor = (text) => {
-  const textarea = document.querySelector('.editor-content textarea')
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  post.value.content = post.value.content.substring(0, start) + text + post.value.content.substring(end)
-}
-
-const handleContentChange = () => {
-  // Calculate reading time (assuming 200 words per minute)
-  const words = post.value.content.trim().split(/\s+/).length
-  post.value.readTime = Math.ceil(words / 200)
+const removeTag = (tag: string) => {
+  post.value.tags = post.value.tags?.filter(t => t !== tag)
 }
 
 const savePost = async () => {
   try {
-    // Validar campos obrigatórios
+    // Validate required fields
     if (!post.value.title) {
-      alert('Please enter a title')
+      alert('Title is required')
       return
     }
 
+    // Ensure content is not empty
     if (!post.value.content) {
-      alert('Please enter some content')
-      return
+      post.value.content = ' '
     }
 
-    console.log('Enviando post:', post.value)
-    if (route.params.id) {
-      await axios.put(`${API_URL}/posts/${route.params.id}`, post.value)
-    } else {
-      const response = await axios.post(`${API_URL}/posts`, post.value)
-      console.log('Resposta do servidor:', response.data)
+    // Calculate read time
+    if (post.value.content) {
+      post.value.read_time = postService.calculateReadingTime(post.value.content)
     }
-    alert('Post saved successfully!')
+
+    console.log('Saving post:', post.value)
+    console.log('Content length:', post.value.content?.length)
+
+    if (isEditing.value && post.value.id) {
+      await postService.updatePost(post.value.id, post.value)
+    } else {
+      await postService.createPost(post.value as Post)
+    }
+    router.push('/admin/posts')
   } catch (error) {
     console.error('Error saving post:', error)
     if (error.response) {
-      console.error('Status:', error.response.status)
-      console.error('Data:', error.response.data)
-      console.error('Headers:', error.response.headers)
-      alert(`Error saving post: ${JSON.stringify(error.response.data)}`)
-    } else if (error.request) {
-      console.error('Request:', error.request)
-      alert('Error saving post: No response from server')
+      console.error('Error response:', error.response.data)
+      alert(`Error saving post: ${error.response.data}`)
     } else {
-      console.error('Error:', error.message)
-      alert(`Error saving post: ${error.message}`)
+      alert('Error saving post. Please try again.')
+    }
+  }
+}
+
+const deletePost = async () => {
+  if (confirm('Are you sure you want to delete this post?')) {
+    try {
+      if (post.value.id) {
+        await postService.deletePost(post.value.id)
+        router.push('/admin/posts')
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      alert('Error deleting post. Please try again.')
     }
   }
 }
@@ -209,150 +185,120 @@ const savePost = async () => {
 .post-editor {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 2rem;
 }
 
 .editor-header {
-  margin-bottom: 20px;
-}
-
-.title-input {
-  font-size: 2em;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.summary-input {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.cover-image {
-  margin-bottom: 20px;
-}
-
-.cover-image-preview {
-  position: relative;
-  margin-bottom: 10px;
-}
-
-.cover-image-preview img {
-  max-width: 100%;
-  max-height: 300px;
-  border-radius: 4px;
-}
-
-.remove-image {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255, 255, 255, 0.8);
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  font-size: 20px;
-  cursor: pointer;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  margin-bottom: 2rem;
 }
 
-.cover-image-input {
+.actions {
   display: flex;
-  gap: 10px;
+  gap: 1rem;
 }
 
-.cover-image-input input {
-  flex: 1;
-  padding: 10px;
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #333;
+}
+
+input[type="text"],
+textarea {
+  padding: 0.75rem;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  font-size: 1rem;
 }
 
-.unsplash-button {
-  padding: 10px 20px;
-  background: #28a745;
-  color: white;
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 4px;
+  font-size: 1rem;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.unsplash-button:hover {
-  background: #218838;
+.btn-primary {
+  background: #007bff;
+  color: white;
 }
 
-.editor-toolbar {
-  margin-bottom: 20px;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 4px;
+.btn-secondary {
+  background: #6c757d;
+  color: white;
 }
 
-.editor-toolbar button {
-  margin-right: 10px;
-  padding: 5px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
+.btn-danger {
+  background: #dc3545;
+  color: white;
 }
 
-.editor-content textarea {
+.image-preview {
+  margin-top: 1rem;
+  max-width: 300px;
+}
+
+.image-preview img {
   width: 100%;
-  min-height: 400px;
-  padding: 20px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  line-height: 1.6;
+  height: auto;
 }
 
-.tags-section {
-  margin: 20px 0;
+.tags-input {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .tags-list {
-  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .tag {
-  display: inline-block;
-  padding: 5px 10px;
-  margin: 0 5px 5px 0;
   background: #e9ecef;
+  padding: 0.25rem 0.75rem;
   border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .tag button {
-  margin-left: 5px;
-  border: none;
   background: none;
-  cursor: pointer;
-}
-
-.editor-footer {
-  margin-top: 20px;
-  text-align: right;
-}
-
-.save-button {
-  padding: 10px 20px;
-  background: #007bff;
-  color: white;
   border: none;
-  border-radius: 4px;
+  color: #666;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-tag {
+  padding: 10px;
   cursor: pointer;
 }
 
-.save-button:hover {
-  background: #0056b3;
+.tag button:hover {
+  color: #dc3545;
 }
 </style> 

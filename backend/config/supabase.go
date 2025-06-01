@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -45,11 +46,22 @@ func MakeRequest(method, path string, body interface{}) (*http.Response, error) 
 		return nil, err
 	}
 
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("Supabase error response: %s", string(body))
+	// Read the response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response body: %v", err)
+		return resp, err
 	}
 
+	// Create a new reader with the body content
+	resp.Body = io.NopCloser(bytes.NewBuffer(respBody))
+
+	if resp.StatusCode >= 400 {
+		log.Printf("Supabase error response (Status %d): %s", resp.StatusCode, string(respBody))
+		return resp, fmt.Errorf("Supabase error: %s", string(respBody))
+	}
+
+	log.Printf("Response body: %s", string(respBody))
 	return resp, nil
 }
 

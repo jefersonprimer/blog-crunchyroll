@@ -28,19 +28,39 @@ import TheWelcome from './components/TheWelcome.vue'
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.6;
   color: #333;
   background: #f8f9fa;
+  min-height: 100vh;
+  width: 100%;
+  padding: 0;
+  margin: 0;
 }
 
 .app {
+  width: 800px;
   min-height: 100vh;
+  background: white;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  left: calc(50% - 400px);
+  top: 0;
 }
 
 .navbar {
+  width: 100%;
   background: #fff;
   padding: 1rem 2rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -79,6 +99,8 @@ body {
 }
 
 .main-content {
+  width: 100%;
   padding: 2rem;
+  flex: 1;
 }
 </style>

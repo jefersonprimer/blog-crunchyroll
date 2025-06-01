@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"backend-blog/backend/config"
@@ -69,8 +70,25 @@ func GetPost(w http.ResponseWriter, r *http.Request) {
 func CreatePost(w http.ResponseWriter, r *http.Request) {
 	var post models.Post
 	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		log.Printf("Error decoding request body: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// Validate required fields
+	if post.Title == "" {
+		http.Error(w, "Title is required", http.StatusBadRequest)
+		return
+	}
+
+	// Clean content if it contains error messages
+	if strings.Contains(post.Content, "Access to XMLHttpRequest") {
+		post.Content = " "
+	}
+
+	// Ensure content is not nil
+	if post.Content == "" {
+		post.Content = " "
 	}
 
 	// Gerar UUID para o novo post
@@ -79,6 +97,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	post.UpdatedAt = time.Now()
 
 	log.Printf("Tentando criar post: %+v", post)
+	log.Printf("Content length: %d", len(post.Content))
 
 	resp, err := config.MakeRequest("POST", "/posts", post)
 	if err != nil {
@@ -102,6 +121,14 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(result) == 0 {
+		log.Printf("Nenhum post retornado na resposta")
+		http.Error(w, "No post returned in response", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Post criado com sucesso: %+v", result[0])
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(result[0])
@@ -117,14 +144,26 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	var post models.Post
 	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		log.Printf("Error decoding request body: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// Clean content if it contains error messages
+	if strings.Contains(post.Content, "Access to XMLHttpRequest") {
+		post.Content = " "
+	}
+
+	// Ensure content is not nil
+	if post.Content == "" {
+		post.Content = " "
 	}
 
 	post.ID = id // Garantir que o ID seja o mesmo da URL
 	post.UpdatedAt = time.Now()
 
 	log.Printf("Atualizando post %s: %+v", id, post)
+	log.Printf("Content length: %d", len(post.Content))
 
 	resp, err := config.MakeRequest("PATCH", "/posts?id=eq."+id, post)
 	if err != nil {
@@ -149,9 +188,12 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(result) == 0 {
+		log.Printf("Nenhum post retornado na resposta")
 		http.Error(w, "Post não encontrado", http.StatusNotFound)
 		return
 	}
+
+	log.Printf("Post atualizado com sucesso: %+v", result[0])
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result[0])

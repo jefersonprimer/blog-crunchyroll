@@ -22,15 +22,16 @@ func main() {
 	r.HandleFunc("/api/posts", handlers.GetPosts).Methods("GET")
 	r.HandleFunc("/api/posts", handlers.CreatePost).Methods("POST")
 	r.HandleFunc("/api/posts/{id}", handlers.GetPost).Methods("GET")
-	r.HandleFunc("/api/posts/{id}", handlers.UpdatePost).Methods("PUT")
+	r.HandleFunc("/api/posts/{id}", handlers.UpdatePost).Methods("PATCH")
 	r.HandleFunc("/api/posts/{id}", handlers.DeletePost).Methods("DELETE")
 
 	// Configurar CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization"},
+		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "X-Requested-With"},
 		AllowCredentials: true,
+		Debug:            true,
 	})
 
 	// Iniciar servidor
