@@ -306,7 +306,7 @@ const cleanContent = (content: string): string => {
   // Remove inline styles except preserved ones
   content = content.replace(/style="([^"]*)"/g, (match, styles) => {
     const preservedStylesList = styles.split(';')
-      .filter(style => preservedStyles.some(preserved => style.includes(preserved)))
+      .filter((style: string) => preservedStyles.some(preserved => style.includes(preserved)))
       .join(';');
     return preservedStylesList ? `style="${preservedStylesList}"` : '';
   });
@@ -398,6 +398,37 @@ const resizeImage = (size: 'small' | 'medium' | 'large') => {
     if (editorRef.value) {
       emit('update:modelValue', cleanContent(editorRef.value.innerHTML));
     }
+  }
+};
+
+const handleVideoInputKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    handleVideoUrlSubmit();
+  } else if (event.key === 'Escape') {
+    showVideoInput.value = false;
+    videoUrl.value = '';
+  }
+};
+
+const handleVideoUrlSubmit = () => {
+  const embedUrl = getEmbedUrl(videoUrl.value);
+  if (embedUrl) {
+    const videoTag = `<p class="text-lg leading-relaxed my-6">
+      <div class="video-wrapper" style="max-width: 100%; border-radius: 8px;">
+        <iframe 
+          src="${embedUrl}" 
+          frameborder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen
+          style="width: 100%; height: 100%; border-radius: 8px;"
+        ></iframe>
+      </div>
+    </p>`;
+    insertAtCursor(videoTag);
+    showVideoInput.value = false;
+    videoUrl.value = '';
+  } else {
+    alert('Please enter a valid YouTube, Vimeo, or Dailymotion URL');
   }
 };
 
@@ -835,6 +866,7 @@ onUnmounted(() => {
   display: inline-block;
   margin: 0 4px;
   vertical-align: middle;
+  border: none;
 }
 
 .inline-image-input,
