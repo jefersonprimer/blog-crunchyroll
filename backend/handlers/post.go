@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -96,6 +97,11 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	post.CreatedAt = time.Now()
 	post.UpdatedAt = time.Now()
 
+	// Ensure we're using category instead of categories
+	if post.Category == "" {
+		post.Category = "Uncategorized"
+	}
+
 	log.Printf("Tentando criar post: %+v", post)
 	log.Printf("Content length: %d", len(post.Content))
 
@@ -162,6 +168,11 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	post.ID = id // Garantir que o ID seja o mesmo da URL
 	post.UpdatedAt = time.Now()
 
+	// Ensure we're using category instead of categories
+	if post.Category == "" {
+		post.Category = "Uncategorized"
+	}
+
 	log.Printf("Atualizando post %s: %+v", id, post)
 	log.Printf("Content length: %d", len(post.Content))
 
@@ -225,4 +236,46 @@ func DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func GetPostBySlug(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	category := params["category"]
+	year := params["year"]
+	month := params["month"]
+	day := params["day"]
+	slug := params["slug"]
+
+	// Construct the date string in the format expected by the database
+	dateStr := fmt.Sprintf("%s-%s-%s", year, month, day)
+
+	// Query posts by category, date, and slug
+	query := fmt.Sprintf("/posts?category=eq.%s&created_at=gte.%sT00:00:00&created_at=lt.%sT23:59:59&slug=eq.%s",
+		category, dateStr, dateStr, slug)
+
+	resp, err := config.MakeRequest("GET", query, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "Post não encontrado", http.StatusNotFound)
+		return
+	}
+
+	var posts []models.Post
+	if err := json.NewDecoder(resp.Body).Decode(&posts); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(posts) == 0 {
+		http.Error(w, "Post não encontrado", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts[0])
 }

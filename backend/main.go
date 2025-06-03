@@ -24,10 +24,11 @@ func main() {
 	r.HandleFunc("/api/posts/{id}", handlers.GetPost).Methods("GET")
 	r.HandleFunc("/api/posts/{id}", handlers.UpdatePost).Methods("PATCH")
 	r.HandleFunc("/api/posts/{id}", handlers.DeletePost).Methods("DELETE")
+	r.HandleFunc("/api/posts/{category}/{year}/{month}/{day}/{slug}", handlers.GetPostBySlug).Methods("GET")
 
 	// Configurar CORS
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3001", "http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "X-Requested-With"},
 		AllowCredentials: true,

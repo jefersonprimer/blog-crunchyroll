@@ -7,9 +7,12 @@ export interface Post {
   content: string;
   cover_image: string;
   tags: string[];
+  category: string;
+  slug: string;
   author: {
     name: string;
     image: string;
+    role?: string;
   };
   created_at: string;
   updated_at: string;

@@ -24,6 +24,11 @@
       </div>
 
       <div class="form-group">
+        <label>Slug</label>
+        <input type="text" v-model="post.slug" placeholder="Enter post slug" />
+      </div>
+
+      <div class="form-group">
         <label>Summary</label>
         <textarea v-model="post.summary" placeholder="Enter post summary"></textarea>
       </div>
@@ -31,6 +36,11 @@
       <div class="form-group">
         <label>Content</label>
         <RichTextEditor v-model="post.content" />
+      </div>
+
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" v-model="post.category" placeholder="Enter post category" />
       </div>
 
       <div class="form-group">
@@ -78,15 +88,18 @@ const route = useRoute()
 const router = useRouter()
 const isEditing = ref(false)
 
-const post = ref<Partial<Post>>({
+const post = ref<Post>({
   title: '',
   summary: '',
   content: '',
   cover_image: '',
   tags: [],
+  category: '',
+  slug: '',
   author: {
     name: '',
-    image: ''
+    image: '',
+    role: ''
   },
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -105,9 +118,11 @@ onMounted(async () => {
         ...fetchedPost,
         content: fetchedPost.content || '',
         tags: fetchedPost.tags || [],
+        category: fetchedPost.category || '',
         author: {
           name: fetchedPost.author?.name || '',
-          image: fetchedPost.author?.image || ''
+          image: fetchedPost.author?.image || '',
+          role: fetchedPost.author?.role || ''
         }
       }
     } catch (error) {
@@ -152,10 +167,10 @@ const savePost = async () => {
     if (isEditing.value && post.value.id) {
       await postService.updatePost(post.value.id, post.value)
     } else {
-      await postService.createPost(post.value as Post)
+      await postService.createPost(post.value)
     }
     router.push('/admin/posts')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving post:', error)
     if (error.response) {
       console.error('Error response:', error.response.data)

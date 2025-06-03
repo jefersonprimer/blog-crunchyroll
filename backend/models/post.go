@@ -11,6 +11,8 @@ type Post struct {
 	Content    string    `json:"content"`
 	CoverImage string    `json:"cover_image"`
 	Tags       []string  `json:"tags"`
+	Category   string    `json:"category"`
+	Slug       string    `json:"slug"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 	Author     Author    `json:"author"`

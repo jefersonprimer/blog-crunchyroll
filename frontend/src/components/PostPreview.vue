@@ -6,13 +6,13 @@
     <div v-else-if="error" class="error">
       {{ error }}
     </div>
-    <div v-else class="post-content">
+    <div v-else-if="post" class="post-content">
       <div class="post-info">
         <div class="tags" v-if="post.tags?.length">
-        <span v-for="tag in post.tags" :key="tag" class="tag">
-          {{ tag }}
-        </span>
-      </div>
+          <span v-for="tag in post.tags" :key="tag" class="tag">
+            {{ tag }}
+          </span>
+        </div>
         <span class="date">{{ formatDate(post.created_at) }}</span>
         <span class="reading-time">{{ post.read_time }} min read</span>
       </div>
